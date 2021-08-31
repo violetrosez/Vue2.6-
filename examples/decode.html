@@ -8,13 +8,21 @@
     <script src="../dist/vue.js"></script>
   </head>
   <body>
-    <div id="app">{{msg}}</div>
+    <div id="app">
+      {{msg}}
+      <Comp :data="foo" />
+    </div>
     <script>
+      let Comp = Vue.component("Comp", {
+        template: "<h2>{{data}}</h2>",
+        props: ["data"],
+      });
       //单文件入口
       new Vue({
         el: "#app",
         data: {
           msg: "hello world",
+          foo: {name: 'props'}
         },
       });
     </script>

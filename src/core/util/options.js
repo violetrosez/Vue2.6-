@@ -25,6 +25,9 @@ import {
  * Option overwriting strategies are functions that handle
  * how to merge a parent option value and a child option
  * value into the final value.
+ * 选项覆盖策略是处理
+ * 如何合并父选项值和子选项
+ * 将值转换为最终值。
  */
 const strats = config.optionMergeStrategies
 
@@ -390,48 +393,52 @@ export function mergeOptions (
   child: Object,
   vm?: Component
 ): Object {
-  if (process.env.NODE_ENV !== 'production') {
-    checkComponents(child)
+  if (process.env.NODE_ENV !== "production") {
+    checkComponents(child);
   }
 
-  if (typeof child === 'function') {
-    child = child.options
+  if (typeof child === "function") {
+    child = child.options;
   }
-
-  normalizeProps(child, vm)
-  normalizeInject(child, vm)
-  normalizeDirectives(child)
+  // 标准化 props、inject、directive 选项，方便后续程序的处理
+  normalizeProps(child, vm);
+  normalizeInject(child, vm);
+  normalizeDirectives(child);
 
   // Apply extends and mixins on the child options,
   // but only if it is a raw options object that isn't
   // the result of another mergeOptions call.
   // Only merged options has the _base property.
+
+  // 处理原始 child 对象上的 extends 和 mixins，分别执行 mergeOptions，将这些继承而来的选项合并到 parent
+  // mergeOptions 处理过的对象会含有 _base 属性
   if (!child._base) {
     if (child.extends) {
-      parent = mergeOptions(parent, child.extends, vm)
+      parent = mergeOptions(parent, child.extends, vm);
     }
     if (child.mixins) {
       for (let i = 0, l = child.mixins.length; i < l; i++) {
-        parent = mergeOptions(parent, child.mixins[i], vm)
+        parent = mergeOptions(parent, child.mixins[i], vm);
       }
     }
   }
 
-  const options = {}
-  let key
+  const options = {};
+  let key;
   for (key in parent) {
-    mergeField(key)
+    mergeField(key);
   }
   for (key in child) {
     if (!hasOwn(parent, key)) {
-      mergeField(key)
+      mergeField(key);
     }
   }
-  function mergeField (key) {
-    const strat = strats[key] || defaultStrat
-    options[key] = strat(parent[key], child[key], vm, key)
+  function mergeField(key) {
+    // console.log(strats,key);
+    const strat = strats[key] || defaultStrat;
+    options[key] = strat(parent[key], child[key], vm, key);
   }
-  return options
+  return options;
 }
 
 /**
