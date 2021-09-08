@@ -10,10 +10,11 @@
   <body>
     <div id="app">
       {{msg}}
-      <Comp :data="foo" />
+      <Comp :data="msg"></Comp>
     </div>
     <script>
       let Comp = Vue.component("Comp", {
+        name: "aaaa",
         template: "<h2>{{data}}</h2>",
         props: ["data"],
       });
@@ -21,8 +22,7 @@
       new Vue({
         el: "#app",
         data: {
-          msg: "hello world",
-          foo: {name: 'props'}
+          msg: { name: "hello world" },
         },
       });
     </script>

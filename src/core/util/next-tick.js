@@ -30,7 +30,10 @@ function flushCallbacks() {
 // where microtasks have too high a priority and fire in between supposedly
 // sequential events (e.g. #4521, #6690, which have workarounds)
 // or even between bubbling of the same event (#6566).
-let timerFunc; //// 可以看到 timerFunc 的作用很简单，就是将 flushCallbacks 函数放入浏览器的异步任务队列中
+
+//FIX: 可以看到 timerFunc 的作用很简单，就是将 flushCallbacks 函数放入浏览器的异步任务队列中
+
+let timerFunc;
 
 // The nextTick behavior leverages the microtask queue, which can be accessed
 // via either native Promise.then or MutationObserver.
@@ -38,6 +41,7 @@ let timerFunc; //// 可以看到 timerFunc 的作用很简单，就是将 flushC
 // UIWebView in iOS >= 9.3.3 when triggered in touch event handlers. It
 // completely stops working after triggering a few times... so, if native
 // Promise is available, we will use it:
+
 /* istanbul ignore next, $flow-disable-line */
 if (typeof Promise !== "undefined" && isNative(Promise)) {
   const p = Promise.resolve();
@@ -86,9 +90,10 @@ if (typeof Promise !== "undefined" && isNative(Promise)) {
   };
 }
 
+/** 把flushSchedulerQueue包装一层之后放到callbacks数组里面 */
 export function nextTick(cb?: Function, ctx?: Object) {
   let _resolve;
-  console.log(cb);
+  // console.log(cb);
   callbacks.push(() => {
     if (cb) {
       try {
@@ -102,6 +107,10 @@ export function nextTick(cb?: Function, ctx?: Object) {
   });
   if (!pending) {
     pending = true;
+    // 将 flushCallbacks 函数放入浏览器的异步任务队列中
+    // flushCallbacks 作用是刷新callbacks数组
+    // 执行 callbacks 数组中的每一个函数（比如 flushSchedulerQueue、用户调用 $nextTick 传递的回调函数）
+    //
     timerFunc();
   }
   // $flow-disable-line

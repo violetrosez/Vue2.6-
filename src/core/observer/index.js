@@ -30,6 +30,7 @@ export function toggleObserving(value: boolean) {
 }
 
 /**
+ * NOTE: 观察者类，属性劫持，添加getter setter
  * Observer class that is attached to each observed
  * object. Once attached, the observer converts the target
  * object's property keys into getter/setters that
@@ -45,6 +46,7 @@ export class Observer {
     this.dep = new Dep();
     this.vmCount = 0;
     def(value, "__ob__", this);
+    // 数组的处理，原型链代理
     if (Array.isArray(value)) {
       if (hasProto) {
         protoAugment(value, arrayMethods);
@@ -53,6 +55,7 @@ export class Observer {
       }
       this.observeArray(value);
     } else {
+      // 对象的处理
       this.walk(value);
     }
   }
@@ -65,6 +68,7 @@ export class Observer {
   walk(obj: Object) {
     const keys = Object.keys(obj);
     for (let i = 0; i < keys.length; i++) {
+
       defineReactive(obj, keys[i]);
     }
   }
@@ -104,6 +108,7 @@ function copyAugment(target: Object, src: Object, keys: Array<string>) {
 }
 
 /**
+ * 响应式入口：
  * Attempt to create an observer instance for a value,
  * returns the new observer if successfully observed,
  * or the existing observer if the value already has one.
@@ -122,9 +127,9 @@ export function observe(value: any, asRootData: ?boolean): Observer | void {
     Object.isExtensible(value) &&
     !value._isVue
   ) {
-
     ob = new Observer(value);
   }
+
   if (asRootData && ob) {
     ob.vmCount++;
   }
@@ -155,6 +160,8 @@ export function defineReactive(
     val = obj[key];
   }
 
+  // 递归调用，处理 val 即 obj[key] 的值为对象的情况，保证对象中的所有 key 都被观察
+  // shallow = true 代表浅观测 不递归，默认false 递归观察所有
   let childOb = !shallow && observe(val);
 
   Object.defineProperty(obj, key, {
@@ -162,8 +169,17 @@ export function defineReactive(
     configurable: true,
     get: function reactiveGetter() {
       const value = getter ? getter.call(obj) : val;
+      /**
+       * Dep.target 为 Dep 类的一个静态属性，值为 watcher，在实例化 Watcher 时会被设置
+       * 实例化 Watcher 时会执行 new Watcher 时传递的回调函数（computed 除外，因为它懒执行）
+       * 而回调函数中如果有 vm.key 的读取行为，则会触发这里的 读取 拦截，进行依赖收集
+       * 回调函数执行完以后又会将 Dep.target 设置为 null，避免这里重复收集依赖
+       */
+
       if (Dep.target) {
+        // 依赖收集，在 dep 中添加 watcher，也在 watcher 中添加 dep
         dep.depend();
+        // childOb 表示对象中嵌套对象的观察者对象，如果存在也对其进行依赖收
         if (childOb) {
           childOb.dep.depend();
           if (Array.isArray(value)) {
@@ -174,8 +190,10 @@ export function defineReactive(
       return value;
     },
     set: function reactiveSetter(newVal) {
+      // 拿到老的值
       const value = getter ? getter.call(obj) : val;
       /* eslint-disable no-self-compare */
+      // 新旧值对比
       if (newVal === value || (newVal !== newVal && value !== value)) {
         return;
       }
@@ -210,15 +228,18 @@ export function set(target: Array<any> | Object, key: any, val: any): any {
       `Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`
     );
   }
+  // 先处理数组
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.length = Math.max(target.length, key);
     target.splice(key, 1, val);
     return val;
   }
+  // 对象内已存在的属性直接更新
   if (key in target && !(key in Object.prototype)) {
     target[key] = val;
     return val;
   }
+  // 没这个属性代表不是响应式对象
   const ob = (target: any).__ob__;
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== "production" &&
@@ -228,10 +249,12 @@ export function set(target: Array<any> | Object, key: any, val: any): any {
       );
     return val;
   }
+  // 不是响应式对象 只做赋值
   if (!ob) {
     target[key] = val;
     return val;
   }
+  // 给对象定义新属性，通过 defineReactive 方法设置响应式，并触发依赖更新
   defineReactive(ob.value, key, val);
   ob.dep.notify();
   return val;

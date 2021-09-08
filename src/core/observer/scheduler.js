@@ -18,6 +18,7 @@ let index = 0;
 
 /**
  * Reset the scheduler's state.
+ * 重置调度状态
  */
 function resetSchedulerState() {
   index = queue.length = activatedChildren.length = 0;
@@ -60,12 +61,16 @@ if (inBrowser && !isIE) {
 }
 
 /**
- * 刷watcher队列，执行每一个watcher
  * Flush both queues and run the watchers.
+ * 刷新队列，由 flushCallbacks 函数负责调用，主要做了如下两件事：
+ *   1、更新 flushing 为 ture，表示正在刷新队列，在此期间往队列中 push 新的 watcher 时需要特殊处理（将其放在队列的合适位置）
+ *   2、按照队列中的 watcher.id 从小到大排序，保证先创建的 watcher 先执行，也配合 第一步
+ *   3、遍历 watcher 队列，依次执行 watcher.before、watcher.run，并清除缓存的 watcher
  */
+
 function flushSchedulerQueue() {
   currentFlushTimestamp = getNow();
-  flushing = true;
+  flushing = true; // 代表当前正在刷新
   let watcher, id;
 
   // Sort queue before flush.
@@ -90,12 +95,13 @@ function flushSchedulerQueue() {
   // as we run existing watchers
   for (index = 0; index < queue.length; index++) {
     watcher = queue[index];
+    // 执行before钩子，很少用
     if (watcher.before) {
       watcher.before();
     }
     id = watcher.id;
-    has[id] = null;
-    watcher.run();
+    has[id] = null; //清除缓存的watcher
+    watcher.run(); // 执行 watcher.run，最终触发更新函数，比如 updateComponent 或者 获取 this.xx
     // in dev build, check and stop circular updates.
     if (process.env.NODE_ENV !== "production" && has[id] != null) {
       circular[id] = (circular[id] || 0) + 1;
@@ -115,6 +121,12 @@ function flushSchedulerQueue() {
   // keep copies of post queues before resetting state
   const activatedQueue = activatedChildren.slice();
   const updatedQueue = queue.slice();
+  /**
+   * 重置调度状态：
+   *   1、重置 has 缓存对象，has = {}
+   *   2、waiting = flushing = false，表示刷新队列结束
+   *     waiting = flushing = false，表示可以像 callbacks 数组中放入新的 flushSchedulerQueue 函数，并且可以向浏览器的任务队列放入下一个 flushCallbacks 函数了
+   */
 
   resetSchedulerState();
 
@@ -174,7 +186,7 @@ export function queueWatcher(watcher: Watcher) {
     } else {
       // if already flushing, splice the watcher based on its id
       // if already past its id, it will be run next immediately.
-      // 为什么要按id排序
+      // 按id找到插入位置 保持队列是有序的
       let i = queue.length - 1;
       while (i > index && queue[i].id > watcher.id) {
         i--;
@@ -189,6 +201,7 @@ export function queueWatcher(watcher: Watcher) {
         flushSchedulerQueue();
         return;
       }
+      //  将 回调函数（flushSchedulerQueue） 放入 callbacks 数组
       nextTick(flushSchedulerQueue);
     }
   }

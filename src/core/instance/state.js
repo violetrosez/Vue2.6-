@@ -175,6 +175,7 @@ export function getData(data: Function, vm: Component): any {
   }
 }
 
+// 说明computed 默认是懒执行的
 const computedWatcherOptions = { lazy: true };
 
 function initComputed(vm: Component, computed: Object) {
@@ -192,6 +193,7 @@ function initComputed(vm: Component, computed: Object) {
 
     if (!isSSR) {
       // create internal watcher for the computed property.
+      // 这就是常说的用户watcher
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -204,6 +206,7 @@ function initComputed(vm: Component, computed: Object) {
     // component prototype. We only need to define computed properties defined
     // at instantiation here.
     if (!(key in vm)) {
+      // 代理属性到vm上面 可通过this访问
       defineComputed(vm, key, userDef);
     } else if (process.env.NODE_ENV !== "production") {
       if (key in vm.$data) {
@@ -224,6 +227,7 @@ export function defineComputed(
   userDef: Object | Function
 ) {
   const shouldCache = !isServerRendering();
+  // 可能是对象形式 或者 函数形式
   if (typeof userDef === "function") {
     sharedPropertyDefinition.get = shouldCache
       ? createComputedGetter(key)
@@ -250,6 +254,20 @@ export function defineComputed(
   }
   Object.defineProperty(target, key, sharedPropertyDefinition);
 }
+
+// NOTE: computed 缓存的原理：
+// 计算 key 对应的值，通过执行 computed.key 的回调函数来得到
+// watcher.dirty 属性就是大家常说的 computed 计算结果会缓存的原理
+// <template>
+//   <div>{{ computedProperty }}</div>
+//   <div>{{ computedProperty }}</div>
+// </template>
+// 像这种情况下，在页面的一次渲染中，两个 dom 中的 computedProperty 只有第一个
+// 会执行 computed.computedProperty 的回调函数计算实际的值，
+// 即执行 watcher.evalaute，而第二个就不走计算过程了，
+// 因为上一次执行 watcher.evalute 时把 watcher.dirty 置为了 false，
+// 待页面更新后，wathcer.update 方法会将 watcher.dirty 重新置为 true，
+// 供下次页面更新时重新计算 computed.key 的结果
 
 function createComputedGetter(key) {
   return function computedGetter() {
@@ -300,6 +318,7 @@ function initMethods(vm: Component, methods: Object) {
   }
 }
 
+/** handle 作为watcher的cb函数  更新的时候传入新旧值执行 */
 function initWatch(vm: Component, watch: Object) {
   for (const key in watch) {
     const handler = watch[key];
@@ -313,6 +332,7 @@ function initWatch(vm: Component, watch: Object) {
   }
 }
 
+// watcher两种情况，字符串或者对象，确保得到一个函数
 function createWatcher(
   vm: Component,
   expOrFn: string | Function,
@@ -369,9 +389,11 @@ export function stateMixin(Vue: Class<Component>) {
       return createWatcher(vm, expOrFn, cb, options);
     }
     options = options || {};
+    // 标识是一个用户watcher  还有渲染watcher 即 updateComponent 方法中实例化的 watcher
     options.user = true;
     const watcher = new Watcher(vm, expOrFn, cb, options);
     if (options.immediate) {
+      // immediate 立即执行
       try {
         cb.call(vm, watcher.value);
       } catch (error) {
@@ -382,6 +404,7 @@ export function stateMixin(Vue: Class<Component>) {
         );
       }
     }
+    // 用于接触监听
     return function unwatchFn() {
       watcher.teardown();
     };

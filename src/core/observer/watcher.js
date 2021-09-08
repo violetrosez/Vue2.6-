@@ -94,7 +94,11 @@ export default class Watcher {
   }
 
   /**
-   * Evaluate the getter, and re-collect dependencies.
+   * 执行 this.getter，并重新收集依赖
+   * this.getter 是实例化 watcher 时传递的第二个参数，一个函数或者字符串，比如：updateComponent 或者 parsePath 返回的函数
+   * 为什么要重新收集依赖？
+   *   因为触发更新说明有响应式数据被更新了，但是被更新的数据虽然已经经过 observe 观察了，但是却没有进行依赖收集，
+   *   所以，在更新页面时，会重新执行一次 render 函数，执行期间会触发读取操作，这时候进行依赖收集
    */
   get() {
     pushTarget(this);
@@ -175,9 +179,12 @@ export default class Watcher {
   }
 
   /**
-   * Scheduler job interface.
-   * Will be called by the scheduler.
+   * 由 刷新队列函数 flushSchedulerQueue 调用，如果是同步 watch，则由 this.update 直接调用，完成如下几件事：
+   *   1、执行实例化 watcher 传递的第二个参数，updateComponent 或者 获取 this.xx 的一个函数(parsePath 返回的函数)
+   *   2、更新旧值为新值
+   *   3、执行实例化 watcher 时传递的第三个参数，比如用户 watcher 的回调函数
    */
+
   run() {
     if (this.active) {
       const value = this.get();
@@ -190,10 +197,12 @@ export default class Watcher {
         this.deep
       ) {
         // set new value
+        // 更新旧值为新值
         const oldValue = this.value;
         this.value = value;
         if (this.user) {
           try {
+            // 用户watcher 执行用户出传入的回调，传入参数newvalue oldvalue
             this.cb.call(this.vm, value, oldValue);
           } catch (e) {
             handleError(
@@ -203,6 +212,7 @@ export default class Watcher {
             );
           }
         } else {
+          // 渲染watcher cb为一个空函数
           this.cb.call(this.vm, value, oldValue);
         }
       }
