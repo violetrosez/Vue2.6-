@@ -379,12 +379,15 @@ export function stateMixin(Vue: Class<Component>) {
   Vue.prototype.$set = set;
   Vue.prototype.$delete = del;
 
+  // 实例方法$watch
+  // 创建一个用户watcher
   Vue.prototype.$watch = function (
     expOrFn: string | Function,
     cb: any,
     options?: Object
   ): Function {
     const vm: Component = this;
+    // 兼容性处理，因为用户调用 vm.$watch 时设置的 cb 可能是对象
     if (isPlainObject(cb)) {
       return createWatcher(vm, expOrFn, cb, options);
     }

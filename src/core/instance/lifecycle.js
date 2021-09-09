@@ -55,6 +55,9 @@ export function initLifecycle(vm: Component) {
 }
 
 export function lifecycleMixin(Vue: Class<Component>) {
+  /**
+   * 负责更新页面，页面首次渲染和后续更新的入口位置，也是 patch 的入口位置
+   */
   Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
     const vm: Component = this;
     const prevEl = vm.$el;
@@ -65,6 +68,7 @@ export function lifecycleMixin(Vue: Class<Component>) {
     // based on the rendering backend used.
     if (!prevVnode) {
       // initial render
+      // 说明是首次渲染
       vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */);
     } else {
       // updates
@@ -85,7 +89,10 @@ export function lifecycleMixin(Vue: Class<Component>) {
     // updated hook is called by the scheduler to ensure that children are
     // updated in a parent's updated hook.
   };
-
+  /**
+   * 直接调用 watcher.update 方法，迫使组件重新渲染。
+   * 它仅仅影响实例本身和插入插槽内容的子组件，而不是所有子组件
+   */
   Vue.prototype.$forceUpdate = function () {
     const vm: Component = this;
     if (vm._watcher) {
@@ -347,13 +354,14 @@ export function callHook(vm: Component, hook: string) {
   // #7573 disable dep collection when invoking lifecycle hooks
   pushTarget();
   const handlers = vm.$options[hook];
+  console.log(handlers);
   const info = `${hook} hook`;
   if (handlers) {
     for (let i = 0, j = handlers.length; i < j; i++) {
       invokeWithErrorHandling(handlers[i], vm, null, vm, info);
     }
   }
-  // 触发以hook:mounted形式加的钩子
+  // 触发以hook:mounted形式加的钩子,顺序在mount钩子执行完之后
   if (vm._hasHookEvent) {
     vm.$emit("hook:" + hook);
   }

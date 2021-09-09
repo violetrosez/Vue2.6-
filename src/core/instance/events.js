@@ -58,11 +58,14 @@ export function eventsMixin (Vue: Class<Component>) {
         vm.$on(event[i], fn)
       }
     } else {
-      (vm._events[event] || (vm._events[event] = [])).push(fn)
+      (vm._events[event] || (vm._events[event] = [])).push(fn);
       // optimize hook:event cost by using a boolean flag marked at registration
       // instead of a hash lookup
+      // hookEvent，提供从外部为组件实例注入声明周期方法的机会
+      // 比如从组件外部为组件的 mounted 方法注入额外的逻辑
+      // 该能力是结合 callhook 方法实现的
       if (hookRE.test(event)) {
-        vm._hasHookEvent = true
+        vm._hasHookEvent = true;
       }
     }
     return vm
@@ -80,39 +83,42 @@ export function eventsMixin (Vue: Class<Component>) {
   }
 
   Vue.prototype.$off = function (event?: string | Array<string>, fn?: Function): Component {
-    const vm: Component = this
+    const vm: Component = this;
     // all
+    // vm.$off() 移除实例上的所有监听器 => vm._events = {}
     if (!arguments.length) {
-      vm._events = Object.create(null)
-      return vm
+      vm._events = Object.create(null);
+      return vm;
     }
     // array of events
     if (Array.isArray(event)) {
       for (let i = 0, l = event.length; i < l; i++) {
-        vm.$off(event[i], fn)
+        vm.$off(event[i], fn);
       }
-      return vm
+      return vm;
     }
     // specific event
-    const cbs = vm._events[event]
+    const cbs = vm._events[event];
     if (!cbs) {
-      return vm
+      return vm;
     }
+    // 没有指定回调就注销所有
     if (!fn) {
-      vm._events[event] = null
-      return vm
+      vm._events[event] = null;
+      return vm;
     }
     // specific handler
-    let cb
-    let i = cbs.length
+    // 移除指定事件的指定回调函数，就是从事件的回调数组中找到该回调函数，然后删除
+    let cb;
+    let i = cbs.length;
     while (i--) {
-      cb = cbs[i]
+      cb = cbs[i];
       if (cb === fn || cb.fn === fn) {
-        cbs.splice(i, 1)
-        break
+        cbs.splice(i, 1);
+        break;
       }
     }
-    return vm
+    return vm;
   }
 
   Vue.prototype.$emit = function (event: string): Component {
