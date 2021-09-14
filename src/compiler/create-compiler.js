@@ -6,6 +6,10 @@ import { createCompileToFunctionFn } from './to-function'
 
 export function createCompilerCreator (baseCompile: Function): Function {
   return function createCompiler (baseOptions: CompilerOptions) {
+
+    // 选项合并
+    // 编译
+    // 挂载编译期间的error和warn结果
     function compile (
       template: string,
       options?: CompilerOptions
@@ -57,13 +61,14 @@ export function createCompilerCreator (baseCompile: Function): Function {
       }
 
       finalOptions.warn = warn
-
+      // 调用核心编译函数，传入合并了选项后最终得到的finalOptions 得到编译结果
       const compiled = baseCompile(template.trim(), finalOptions)
       if (process.env.NODE_ENV !== 'production') {
         detectErrors(compiled.ast, warn)
       }
       compiled.errors = errors
       compiled.tips = tips
+      // console.log(compiled);
       return compiled
     }
 

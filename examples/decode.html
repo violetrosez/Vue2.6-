@@ -10,7 +10,8 @@
   <body>
     <div id="app">
       {{msg}}
-      <Comp :data="msg"></Comp>
+
+      <Comp :data="msg" />
     </div>
     <script>
       let Comp = Vue.component("Comp", {
@@ -24,9 +25,7 @@
         data: {
           msg: { name: "hello world" },
         },
-        created() {
 
-        },
       });
     </script>
   </body>

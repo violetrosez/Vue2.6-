@@ -22,6 +22,7 @@ Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean
 ): Component {
+  // 挂载的元素
   el = el && query(el);
 
   /* istanbul ignore if */
@@ -35,10 +36,17 @@ Vue.prototype.$mount = function (
 
   const options = this.$options;
   // resolve template/el and convert to render function
-
+  /**
+   * 用户提供了render配置项 就跳过编译阶段
+   * 优先级： render > template > el
+   */
   if (!options.render) {
     let template = options.template;
     if (template) {
+      // 分析template 可能的情况：
+      // 1 id选择器
+      // 2 dom元素
+
       if (typeof template === "string") {
         if (template.charAt(0) === "#") {
           template = idToTemplate(template);
@@ -59,6 +67,7 @@ Vue.prototype.$mount = function (
         return this;
       }
     } else if (el) {
+      // 设置了 el 选项，获取 el 选择器的 outerHtml 作为模版
       template = getOuterHTML(el);
     }
     if (template) {
